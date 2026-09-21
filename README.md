@@ -55,13 +55,16 @@ I divided the program into different parts so that each part has a clear respons
 
 **What to expect :** 
 
-1\.
+1\. <img width="1918" height="561" alt="1" src="https://github.com/user-attachments/assets/e52db112-11af-441c-9ab0-adbfbd9ab9b4" />
 
-2\. 
+2\. <img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/84364e74-133d-4b7c-9c63-df924bc6caec" />
 
-3\.
 
-4\.
+3\.<img width="1920" height="1080" alt="3" src="https://github.com/user-attachments/assets/1a028929-8354-4b43-b17a-e216dcc9ab8f" />
+
+
+4\.<img width="1920" height="1080" alt="4" src="https://github.com/user-attachments/assets/275da27b-51ee-41cd-8b2f-796498d14335" />
+
 
 ## **Books and Members**
 
@@ -87,6 +90,20 @@ When a user wants to borrow a book, the program uses find\_book() to search for 
 | printf 'abc\\n6\\n' | ./library | Types letters where a number is expected, which checks that the program ignores bad menu input and does not crash. |
 | printf '' | ./library | Sends no input at all, which checks that the program exists cleanly and does not hang when the input closes. |
 
+
+**What to expect :** 
+
+1\. <img width="1920" height="1080" alt="1" src="https://github.com/user-attachments/assets/525eacc9-b608-4172-a64e-fad79f377514" />
+
+
+
+2\. <img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/e8649ab8-aa9b-4167-88a8-a8a881c32cd4" />
+
+
+
+3\.<img width="1210" height="495" alt="3" src="https://github.com/user-attachments/assets/922f0c14-7ff0-43dd-ad07-5de445488964" />
+
+ 
 ## **The Blockchain and the Block**
 
 The main idea of the system is that every important lending event becomes a block. A block contains information such as the book, the member, the action taken, the time of the action, the previous block's hash, a digital signature, and its own hash. The assignment requires the block to contain these important pieces of information so that each lending event can be properly recorded.

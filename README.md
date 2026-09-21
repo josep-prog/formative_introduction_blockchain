@@ -30,9 +30,38 @@ I divided the program into different parts so that each part has a clear respons
 
 | Command  | Tests |
 | :---- | :---- |
-| Sudo apt install gcc make libssl-dev | Is for installing the C compiler , build tool and openSSL development files and the program needs |
+| sudo apt install gcc make libssl-dev | Is for installing the C compiler , build tool and openSSL development files and the program needs |
 | make clean && make | Deletes the old program file and compiles all the source files again into the new program called library |
 | ./library  | To start the program and it shows the menu |
+
+**Books**  : 
+
+| ID | Title  | Author |
+| :---- | :---- | :---- |
+| BK001 | The Money Trap: Lost Illusions Inside the Tech Bubble | Alok Sama |
+| BK002 | Wars Guns & Votes: Democracy in Dangerous Places | Paul Collier |
+| BK003 | Sustainable Leadership | Daniel W. Graham |
+| BK005 | Gulliver's Travels and Other Writings | Jonathan Swift  |
+
+**Member:** 
+
+| ID | Name |  |
+| :---- | :---- | :---- |
+| ALU001 | Irakoze Jean | BSE |
+| ALU002 | Joseph Habimana | BSE |
+| ALU003 | Uwase Diane | BEL |
+| ALU004 | Manzi Eric | BSE |
+| ALU005 | Mukamana Alice | BEL |
+
+**What to expect :** 
+
+1\.
+
+2\. 
+
+3\.
+
+4\.
 
 ## **Books and Members**
 
@@ -46,17 +75,17 @@ When a user wants to borrow a book, the program uses find\_book() to search for 
 
 	
 
-| *command* | *purpose* | *Expected output* |
-| :---- | :---- | :---- |
-| printf '1\\nBK001\\nALU001\\n6\\n' | ./library | Borrows book BK001 ALU001 and the exits , which checks that a normal borrow works. | |
-| printf '1\\nBK001\\nALU001\\n1\\nBK001\\nALU002\\n6\\n' | ./library | Borrows BK001 for one member and then tries to borrow the same for another member, which checks that the program refuses a book that is already on loan. |  |
-| printf '1\\nBK999\\nALU001\\n6\\n' | ./library | Tries to borrow a book that is not in the registry, which checks that program print rejects unknown members too. | |
-| printf '1\\nBK001\\nALU001\\n2\\nBK001\\n6\\n' | ./library | Borrows a  book and then returns it , which checks that a return block is created. | |
-| printf '2\\nBK001\\n6\\n' | ./library | Tries to return a book that was never borrowed , which checks that the program prints an error. |  |
-| printf '1\\nBK001\\nALU001\\n2\\nBK001\\n3\\n6\\n' | ./library | Borrows and returns a book and then shows all records , which checks that every block is printed with a VALID signature ||
-| printf '1\\nBK001\\nALU001\\n4\\n6\\n' | ./library | Borrows a book, changes a past block, and validates twice, which checks that tampering is detected and stays detected ||
-| printf 'abc\\n6\\n' | ./library | Types letters where a number is expected, which checks that the program ignores bad menu input and does not crash. | |
-| printf '' | ./library | Sends no input at all, which checks that the program exists cleanly and does not hang when the input closes. |  |
+| *command* | *purpose* |
+| :---- | :---- |
+| printf '1\\nBK001\\nALU001\\n6\\n' | ./library | Borrows book BK001 ALU001 and the exits , which checks that a normal borrow works. |
+| printf '1\\nBK001\\nALU001\\n1\\nBK001\\nALU002\\n6\\n' | ./library | Borrows BK001 for one member and then tries to borrow the same for another member, which checks that the program refuses a book that is already on loan. |
+| printf '1\\nBK999\\nALU001\\n6\\n' | ./library | Tries to borrow a book that is not in the registry, which checks that program print rejects unknown members too. |
+| printf '1\\nBK001\\nALU001\\n2\\nBK001\\n6\\n' | ./library | Borrows a  book and then returns it , which checks that a return block is created. |
+| printf '2\\nBK001\\n6\\n' | ./library | Tries to return a book that was never borrowed , which checks that the program prints an error. |
+| printf '1\\nBK001\\nALU001\\n2\\nBK001\\n3\\n6\\n' | ./library | Borrows and returns a book and then shows all records , which checks that every block is printed with a VALID signature |
+| printf '1\\nBK001\\nALU001\\n4\\n6\\n' | ./library | Borrows a book, changes a past block, and validates twice, which checks that tampering is detected and stays detected |
+| printf 'abc\\n6\\n' | ./library | Types letters where a number is expected, which checks that the program ignores bad menu input and does not crash. |
+| printf '' | ./library | Sends no input at all, which checks that the program exists cleanly and does not hang when the input closes. |
 
 ## **The Blockchain and the Block**
 
@@ -140,9 +169,7 @@ The program also does not currently have a login or role system. This means that
 
 Finally, the block structure allows an OVERDUE action, as described in the assignment, but the current program only creates BORROWED and RETURNED blocks. These are limitations of the current implementation rather than hidden features of the system.
 
-
-
-
+## **Conclusion**
 
 The main purpose of this project was to apply the basic idea of blockchain to a library lending problem. Instead of treating a lending record as an ordinary piece of information that can simply be changed, the program creates a history of connected records. Each new record is linked to the previous one through its hash, and lending actions are also digitally signed.
 

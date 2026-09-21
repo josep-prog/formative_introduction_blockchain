@@ -2,13 +2,13 @@
 
 | File Name | Link | Purpose of the file |
 | :---- | :---- | :---- |
-| Blockchain.c | [**blockchain.c**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/blockchain.c)  | I created this file to control the whole program. It handles the menu and calls the other files when the program needs to load records, create blockchain transactions, or perform security checks. |
-| Blockchain.h | [**blockchain.h**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/blockchain.h)  | I created this file to manage the blockchain. It creates borrowing and returning blocks, links them using hashes, checks active loans, and validates the blockchain. |
-| Crypto.c | [**crypto.c**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/crypto.c)  | I created this file to define the Block structure and declare the blockchain functions so that other files, especially main.c, can use them. |
-| Crypto.h | [**crypto.h**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/crypto.h)  | I created this file to handle the security part of the system. It generates keys, creates digital signatures, and verifies signatures using OpenSSL. |
-| Main.c | [**main.c**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/main.c)  | I created this file to declare the cryptographic functions so that main.c and blockchain.c can use the security functions from crypto.c |
-| Registry.h | [**registry.h**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/registry.h)   | I created this file to manage books and members. It loads their information from the data files and provides functions to find a specific book or member. |
-| Registry.c | [**registry.c**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/registry.c)  | I created this file to define the Book and Member structures and declare the registry functions used by main.c. |
+| Blockchain.c | [**blockchain.c**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/blockchain.c)  | I created this file to manage the blockchain. It creates the genesis, borrowing and returning blocks, links them using hashes, checks active loans, validates the blockchain (hashes, links and signatures), and saves and loads the chain file. |
+| Blockchain.h | [**blockchain.h**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/blockchain.h)  | I created this file to define the Block structure and declare the blockchain functions so that other files, especially main.c, can use them. |
+| Crypto.c | [**crypto.c**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/crypto.c)  | I created this file to handle the security part of the system. It generates keys, saves and loads the key file, creates digital signatures, and verifies signatures using OpenSSL. |
+| Crypto.h | [**crypto.h**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/crypto.h)  | I created this file to declare the cryptographic functions so that main.c and blockchain.c can use the security functions from crypto.c |
+| Main.c | [**main.c**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/main.c)  | I created this file to control the whole program. It handles the menu and calls the other files when the program needs to load records, create blockchain transactions, or perform security checks. |
+| Registry.h | [**registry.h**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/registry.h)   | I created this file to define the Book and Member structures and declare the registry functions used by main.c. |
+| Registry.c | [**registry.c**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/registry.c)  | I created this file to load the books and members from the data files and to find a specific book or member by ID. |
 | Books.txt | [**books.txt**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/data/books.txt)  | This file is for storing the registered books, including their IDs, titles, and authors. |
 | Members.txt | [**members.txt**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/data/members.txt)  | this file to store the registered library members and their basic information. |
 | Makefile | [**Makefile**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/Makefile) | this file to make compiling the whole project easier by providing the commands needed to build the program and link OpenSSL. |
@@ -40,12 +40,13 @@ I divided the program into different parts so that each part has a clear respons
 | :---- | :---- | :---- |
 | BK001 | The Money Trap: Lost Illusions Inside the Tech Bubble | Alok Sama |
 | BK002 | Wars Guns & Votes: Democracy in Dangerous Places | Paul Collier |
-| BK003 | Sustainable Leadership | Daniel W. Graham |
+| BK003 | Sustainable Leadership | Clarke Murphy |
+| BK004 | Ancient Philosophy: The Fundamentals | Daniel W. Graham |
 | BK005 | Gulliver's Travels and Other Writings | Jonathan Swift  |
 
 **Member:** 
 
-| ID | Name |  |
+| ID | Name | Course |
 | :---- | :---- | :---- |
 | ALU001 | Irakoze Jean | BSE |
 | ALU002 | Joseph Habimana | BSE |
@@ -55,16 +56,21 @@ I divided the program into different parts so that each part has a clear respons
 
 **What to expect :** 
 
-1\. <img width="1918" height="561" alt="1" src="https://github.com/user-attachments/assets/e52db112-11af-441c-9ab0-adbfbd9ab9b4" />
+1\. On start-up the program prints "Loaded 5 books and 5 members.", loads (or creates) the signing key in data/key.pem, and loads the saved blockchain from data/chain.txt, or starts a new one with the genesis block if there is no file yet.
 
-2\. <img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/84364e74-133d-4b7c-9c63-df924bc6caec" />
+<img width="1918" height="561" alt="1" src="https://github.com/user-attachments/assets/e52db112-11af-441c-9ab0-adbfbd9ab9b4" />
 
+2\. A menu with six options appears: borrow, return, view records, validate, tamper demo and exit.
 
-3\.<img width="1920" height="1080" alt="3" src="https://github.com/user-attachments/assets/1a028929-8354-4b43-b17a-e216dcc9ab8f" />
+<img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/84364e74-133d-4b7c-9c63-df924bc6caec" />
 
+3\. Every successful borrow or return is added as a signed block and saved to data/chain.txt straight away, so the records are still there the next time the program starts. Unknown IDs, a book that is already on loan, or a return for a book that is not on loan print an ERROR and add nothing.
 
-4\.<img width="1920" height="1080" alt="4" src="https://github.com/user-attachments/assets/275da27b-51ee-41cd-8b2f-796498d14335" />
+<img width="1920" height="1080" alt="3" src="https://github.com/user-attachments/assets/1a028929-8354-4b43-b17a-e216dcc9ab8f" />
 
+4\. Option 4 (validate) prints "Blockchain is VALID" for an untouched chain and "Blockchain is INVALID - tampering detected!" if a hash, a link or a signature does not match. Option 5 tampers with Block \#1 in memory only, and the file on disk is never overwritten with an invalid chain.
+
+<img width="1920" height="1080" alt="4" src="https://github.com/user-attachments/assets/275da27b-51ee-41cd-8b2f-796498d14335" />
 
 ## **Books and Members**
 
@@ -76,6 +82,8 @@ When a user wants to borrow a book, the program uses find\_book() to search for 
 
 **Testing :** 
 
+The blockchain is now saved between runs, so run `rm -f data/chain.txt` before each command below to start from a clean chain.
+
 	
 
 | *command* | *purpose* |
@@ -86,7 +94,7 @@ When a user wants to borrow a book, the program uses find\_book() to search for 
 | printf '1\\nBK001\\nALU001\\n2\\nBK001\\n6\\n' | ./library | Borrows a  book and then returns it , which checks that a return block is created. |
 | printf '2\\nBK001\\n6\\n' | ./library | Tries to return a book that was never borrowed , which checks that the program prints an error. |
 | printf '1\\nBK001\\nALU001\\n2\\nBK001\\n3\\n6\\n' | ./library | Borrows and returns a book and then shows all records , which checks that every block is printed with a VALID signature |
-| printf '1\\nBK001\\nALU001\\n4\\n6\\n' | ./library | Borrows a book, changes a past block, and validates twice, which checks that tampering is detected and stays detected |
+| printf '1\\nBK001\\nALU001\\n5\\n4\\n6\\n' | ./library | Borrows a book, runs the tamper demo, and then validates again, which checks that tampering is detected and stays detected |
 | printf 'abc\\n6\\n' | ./library | Types letters where a number is expected, which checks that the program ignores bad menu input and does not crash. |
 | printf '' | ./library | Sends no input at all, which checks that the program exists cleanly and does not hang when the input closes. |
 
@@ -130,9 +138,9 @@ For example, suppose a block originally contains the title “Things Fall Apart.
 
 ## **Digital Signatures**
 
-In addition to hashing, the program uses digital signatures for lending transactions. A digital signature can be thought of as a special digital stamp attached to a transaction. When the program starts, it creates a pair of cryptographic keys. The private key is used to sign borrow and return transactions, while the other part of the key pair is used to check the signature later.
+In addition to hashing, the program uses digital signatures for lending transactions. A digital signature can be thought of as a special digital stamp attached to a transaction. The first time the program runs, it creates a pair of cryptographic keys and saves them in data/key.pem. On later runs the same key is loaded, so old signatures can still be checked. The private key is used to sign borrow and return transactions, while the other part of the key pair is used to check the signature later.
 
-The function generate\_key\_pair() creates this key pair. The function sign\_data() creates a signature for a lending transaction, and verify\_signature() checks whether the signature is still valid. When the user chooses to view the records, the program checks the signatures and reports whether they are valid or invalid.
+The function generate\_key\_pair() creates this key pair, and save\_key() and load\_key() store and read it. The function sign\_data() creates a signature for a lending transaction, and verify\_signature() checks whether the signature is still valid. When the user chooses to view the records, the program checks the signatures and reports whether they are valid or invalid. validate\_chain() checks them too.
 
 The purpose of using signatures here is to provide another way of checking the lending records. Hashing helps the program detect changes in the data, while the signature provides a way to check the authenticity of the transaction. The assignment specifically requires digital signatures to authenticate lending actions.
 
@@ -158,9 +166,11 @@ If the book is currently borrowed, the program creates a new RETURNED block. It 
 
 One of the most important functions in the program is validate\_chain(). Its purpose is to answer a simple question: **Has anything in the blockchain been changed?**
 
-The function checks every block in two ways. First, it calculates the block's hash again and compares it with the hash already stored in that block. If they are different, the contents of the block have changed. Second, for every block after the first one, it checks whether the block's previous\_hash still matches the actual hash of the block before it.
+The function checks every block in three ways. First, it calculates the block's hash again and compares it with the hash already stored in that block. If they are different, the contents of the block have changed. Second, for every block after the first one, it checks whether the block's previous\_hash still matches the actual hash of the block before it.
 
-Both checks are important. The first check tells us whether the contents of a block have changed. The second check makes sure that the blocks are still correctly connected. Together, they provide the basic tamper-detection mechanism required by the assignment.
+Third, for every block after the genesis block, it verifies the digital signature with the public key. This catches a block that was rewritten and re-hashed but not signed by the system's key.
+
+All three checks are important. The first tells us whether the contents of a block have changed. The second makes sure that the blocks are still correctly connected. The third checks that the block really was signed by this system. Together, they provide the tamper-detection mechanism required by the assignment.
 
 While developing the program, I also found an issue with validation. Recalculating the hash directly on the original block could change the stored hash during the checking process. I solved this by making a copy of the block before recalculating its hash. In simple terms, the program now checks a copy instead of changing the original record. This means that validation only checks the blockchain and does not modify it.
 
@@ -170,7 +180,7 @@ The program includes a specific option to demonstrate what happens when an old r
 
 The program then validates the blockchain. Because the contents of the block no longer match its stored fingerprint, the validation fails and the program reports that tampering has been detected. This provides a simple demonstration of the main reason for using a blockchain in this project. The assignment also requires a demonstration that changing a past block breaks chain validation.
 
-The change is only made in memory. Therefore, restarting the program creates a new clean blockchain for another demonstration.
+The change is only made in memory, and the program refuses to save a chain that fails validation. Therefore, restarting the program reloads the clean blockchain from data/chain.txt for another demonstration. You can also open data/chain.txt in a text editor, change a title, and start the program again. It will warn that the saved blockchain is INVALID.
 
 ## **Error Handling**
 
@@ -180,9 +190,9 @@ The program also handles invalid menu input. If the user enters something that i
 
 ## **Current Limitations**
 
-Although the system demonstrates the main ideas required for the blockchain part of the assignment, it also has some limitations. The blockchain is currently stored only in memory, so the borrow and return records disappear when the program closes. The book and member registries are loaded from files, but the blockchain itself is not yet saved to a file. Therefore, the data persistence requirement is only partially implemented. The assignment lists file-based data persistence as one of its objectives.
+Although the system demonstrates the main ideas required for the blockchain part of the assignment, it also has some limitations. The blockchain is saved to data/chain.txt after every borrow or return and loaded again on start-up. The whole file is rewritten each time, which is fine for a small library but not for a large one.
 
-The program also does not currently have a login or role system. This means that anyone who can access the menu can perform the available operations. The signing key is also generated when the program starts and is not permanently stored. In addition, the blockchain validation function currently checks the hashes and the links between blocks, while signature checking is performed separately when records are viewed.
+The program also does not currently have a login or role system. This means that anyone who can access the menu can perform the available operations. The signing key is stored unencrypted in data/key.pem, so anyone who can read that file can sign new blocks. Both data/chain.txt and data/key.pem are listed in .gitignore and are not committed.
 
 Finally, the block structure allows an OVERDUE action, as described in the assignment, but the current program only creates BORROWED and RETURNED blocks. These are limitations of the current implementation rather than hidden features of the system.
 

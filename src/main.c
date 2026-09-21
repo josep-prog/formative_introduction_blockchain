@@ -35,6 +35,21 @@ static void print_block(Block *block, EVP_PKEY *key_pair)
            valid ? "VALID" : "INVALID", block->signature_length);
 }
 
+#define CHAIN_FILE "data/chain.txt"
+#define KEY_FILE   "data/key.pem"
+
+/* Only a valid chain is written to disk, so the tamper demo can never end up in the file. */
+static void save_or_warn(Block blockchain[], int count, EVP_PKEY *key_pair)
+{
+    if (!validate_chain(blockchain, count, key_pair)) {
+        printf("WARNING: chain is invalid, so it was NOT saved to %s.\n", CHAIN_FILE);
+        return;
+    }
+    if (!save_chain(CHAIN_FILE, blockchain, count)) {
+        printf("WARNING: could not save the chain to %s.\n", CHAIN_FILE);
+    }
+}
+
 int main(void)
 {
     Book books[MAX_BOOKS];
@@ -51,19 +66,42 @@ int main(void)
 
     printf("Loaded %d books and %d members.\n", book_count, member_count);
 
-    /* --- Generate the system's signing key for this session --- */
-    EVP_PKEY *key_pair = generate_key_pair();
-    if (key_pair == NULL) {
-        printf("ERROR: Could not generate key pair.\n");
-        return 1;
+    /* --- Load the signing key, or generate and save one on the first run --- */
+    EVP_PKEY *key_pair = load_key(KEY_FILE);
+    if (key_pair != NULL) {
+        printf("Digital signing key loaded from %s.\n", KEY_FILE);
+    } else {
+        key_pair = generate_key_pair();
+        if (key_pair == NULL) {
+            printf("ERROR: Could not generate key pair.\n");
+            return 1;
+        }
+        if (save_key(key_pair, KEY_FILE)) {
+            printf("Digital signing key generated and saved to %s.\n", KEY_FILE);
+        } else {
+            printf("Digital signing key generated (WARNING: could not save it to %s).\n", KEY_FILE);
+        }
     }
-    printf("Digital signing key generated.\n");
 
-    /* --- Start the chain with the genesis block --- */
+    /* --- Load the saved chain, or start a new one with the genesis block --- */
     Block blockchain[MAX_BLOCKS];
-    int count = 0;
-    create_genesis_block(&blockchain[0]);
-    count = 1;
+    int count = load_chain(CHAIN_FILE, blockchain);
+
+    if (count == 0) {
+        /* Don't start a fresh chain over a file we couldn't read. */
+        printf("ERROR: '%s' exists but could not be read. Fix or delete it to continue.\n", CHAIN_FILE);
+        return 1;
+    } else if (count < 0) {
+        create_genesis_block(&blockchain[0]);
+        count = 1;
+        save_or_warn(blockchain, count, key_pair);
+        printf("Started a new blockchain.\n");
+    } else {
+        printf("Loaded %d blocks from %s.\n", count, CHAIN_FILE);
+        if (!validate_chain(blockchain, count, key_pair)) {
+            printf("WARNING: the saved blockchain is INVALID - it may have been tampered with!\n");
+        }
+    }
 
     int choice;
 
@@ -124,6 +162,7 @@ int main(void)
                 key_pair
             );
             count++;
+            save_or_warn(blockchain, count, key_pair);
 
             printf("Borrowed '%s' for %s.\n",
                    books[book_index].title, members[member_index].full_name);
@@ -157,6 +196,7 @@ int main(void)
                 key_pair
             );
             count++;
+            save_or_warn(blockchain, count, key_pair);
 
             printf("Returned '%s'.\n", blockchain[loan_index].book_title);
 
@@ -166,7 +206,7 @@ int main(void)
             }
 
         } else if (choice == 4) {
-            if (validate_chain(blockchain, count)) {
+            if (validate_chain(blockchain, count, key_pair)) {
                 printf("Blockchain is VALID - no tampering detected.\n");
             } else {
                 printf("Blockchain is INVALID - tampering detected!\n");
@@ -178,20 +218,21 @@ int main(void)
                 continue;
             }
 
-            printf("This will edit Block #1's stored book title in memory,\n");
-            printf("WITHOUT re-signing or re-hashing it - exactly what an\n");
-            printf("attacker trying to rewrite history would do.\n");
+            printf("This will edit Block #1's stored book title in memory\n");
+            printf("(the saved file is left untouched), WITHOUT re-signing or\n");
+            printf("re-hashing it - exactly what an attacker trying to rewrite\n");
+            printf("history would do.\n");
 
             strcpy(blockchain[1].book_title, "TAMPERED TITLE");
 
             printf("Block #1's book_title has been altered.\n");
             printf("Running chain validation...\n");
 
-            if (validate_chain(blockchain, count)) {
+            if (validate_chain(blockchain, count, key_pair)) {
                 printf("Blockchain is VALID (unexpected - something's wrong!)\n");
             } else {
                 printf("Blockchain is INVALID - tampering detected, as expected.\n");
-                printf("(Restart the program to get a clean chain again.)\n");
+                printf("(Restart the program to reload the clean chain from disk.)\n");
             }
 
         } else if (choice == 6) {

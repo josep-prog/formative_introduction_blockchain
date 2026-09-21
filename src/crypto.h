@@ -6,6 +6,9 @@
 
 EVP_PKEY *generate_key_pair(void);
 
+int save_key(EVP_PKEY *key_pair, const char *filename);
+EVP_PKEY *load_key(const char *filename);
+
 int sign_data(
     EVP_PKEY *private_key,
     const unsigned char *data,

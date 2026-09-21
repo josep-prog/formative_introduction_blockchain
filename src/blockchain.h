@@ -52,7 +52,12 @@ void create_return_block(
 
 void calculate_hash(Block *block);
 
-int validate_chain(Block blockchain[], int count);
+int validate_chain(Block blockchain[], int count, EVP_PKEY *public_key);
+
+/* save_chain: 1 on success, 0 on failure.
+ * load_chain: number of blocks loaded, 0 if the file is unusable, -1 if it does not exist. */
+int save_chain(const char *filename, Block blockchain[], int count);
+int load_chain(const char *filename, Block blockchain[]);
 
 int find_active_borrow(Block blockchain[], int count, const char *book_id);
 

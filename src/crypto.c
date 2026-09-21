@@ -1,6 +1,10 @@
+#define _POSIX_C_SOURCE 200809L   /* for chmod() under -std=c11 */
+
 #include <stdio.h>
+#include <sys/stat.h>
 #include <openssl/evp.h>
 #include <openssl/ec.h>
+#include <openssl/pem.h>
 
 #include "crypto.h"
 
@@ -105,4 +109,34 @@ int verify_signature(
     EVP_MD_CTX_free(ctx);
 
     return (result == 1) ? 1 : 0;
+}
+
+
+/* Save the key pair as PEM so signatures stay verifiable after a restart.
+ * The public key is stored inside the same file, so one file is enough. */
+int save_key(EVP_PKEY *key_pair, const char *filename)
+{
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        return 0;
+    }
+
+    int ok = PEM_write_PrivateKey(file, key_pair, NULL, NULL, 0, NULL, NULL);
+    fclose(file);
+
+    chmod(filename, 0600);   /* private key: owner read/write only */
+    return ok == 1;
+}
+
+/* Returns NULL if the file is missing or is not a valid key. */
+EVP_PKEY *load_key(const char *filename)
+{
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        return NULL;
+    }
+
+    EVP_PKEY *key_pair = PEM_read_PrivateKey(file, NULL, NULL, NULL);
+    fclose(file);
+    return key_pair;
 }

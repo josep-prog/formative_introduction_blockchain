@@ -1,0 +1,5 @@
+ALU001,Irakoze Jean,SE
+ALU002,Joseph Habimana,SE
+ALU003,Uwase Diane,CS
+ALU004,Manzi Eric,SE
+ALU005,Mukamana Alice,CS

@@ -140,7 +140,9 @@ The program also does not currently have a login or role system. This means that
 
 Finally, the block structure allows an OVERDUE action, as described in the assignment, but the current program only creates BORROWED and RETURNED blocks. These are limitations of the current implementation rather than hidden features of the system.
 
-## **Conclusion**
+
+
+
 
 The main purpose of this project was to apply the basic idea of blockchain to a library lending problem. Instead of treating a lending record as an ordinary piece of information that can simply be changed, the program creates a history of connected records. Each new record is linked to the previous one through its hash, and lending actions are also digitally signed.
 

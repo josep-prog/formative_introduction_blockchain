@@ -48,15 +48,15 @@ When a user wants to borrow a book, the program uses find\_book() to search for 
 
 | *command* | *purpose* | *Expected output* |
 | :---- | :---- | :---- |
-| **printf '1\\nBK001\\nALU001\\n6\\n' | ./library** | Borrows book BK001 ALU001 and the exits , which checks that a normal borrow works. |  |
-| **printf '1\\nBK001\\nALU001\\n1\\nBK001\\nALU002\\n6\\n' | ./library** | Borrows BK001 for one member and then tries to borrow the same for another member, which checks that the program refuses a book that is already on loan. |  |
-| **printf '1\\nBK999\\nALU001\\n6\\n' | ./library** | Tries to borrow a book that is not in the registry, which checks that program print rejects unknown members too. |  |
-| **printf '1\\nBK001\\nALU001\\n2\\nBK001\\n6\\n' | ./library** | Borrows a  book and then returns it , which checks that a return block is created. |  |
-| **printf '2\\nBK001\\n6\\n' | ./library** | Tries to return a book that was never borrowed , which checks that the program prints an error. |  |
-| **printf '1\\nBK001\\nALU001\\n2\\nBK001\\n3\\n6\\n' | ./library** | Borrows and returns a book and then shows all records , which checks that every block is printed with a VALID signature |  |
-| **printf '1\\nBK001\\nALU001\\n4\\n6\\n' | ./library** | Borrows a book, changes a past block, and validates twice, which checks that tampering is detected and stays detected |  |
-| **printf 'abc\\n6\\n' | ./library** | Types letters where a number is expected, which checks that the program ignores bad menu input and does not crash. |  |
-| printf '' | ./library | Sends no input at all, which checks that the program exists cleanly and does not hang when the input closes. |  |
+| **printf '1\\nBK001\\nALU001\\n6\\n' | ./library** | Borrows book BK001 ALU001 and the exits , which checks that a normal borrow works. | fffff |
+| **printf '1\\nBK001\\nALU001\\n1\\nBK001\\nALU002\\n6\\n' | ./library** | Borrows BK001 for one member and then tries to borrow the same for another member, which checks that the program refuses a book that is already on loan. | ffffff |
+| **printf '1\\nBK999\\nALU001\\n6\\n' | ./library** | Tries to borrow a book that is not in the registry, which checks that program print rejects unknown members too. | ffffff |
+| **printf '1\\nBK001\\nALU001\\n2\\nBK001\\n6\\n' | ./library** | Borrows a  book and then returns it , which checks that a return block is created. | ffffff |
+| **printf '2\\nBK001\\n6\\n' | ./library** | Tries to return a book that was never borrowed , which checks that the program prints an error. | ffffff |
+| **printf '1\\nBK001\\nALU001\\n2\\nBK001\\n3\\n6\\n' | ./library** | Borrows and returns a book and then shows all records , which checks that every block is printed with a VALID signature | ffff |
+| **printf '1\\nBK001\\nALU001\\n4\\n6\\n' | ./library** | Borrows a book, changes a past block, and validates twice, which checks that tampering is detected and stays detected | fffff |
+| **printf 'abc\\n6\\n' | ./library** | Types letters where a number is expected, which checks that the program ignores bad menu input and does not crash. | ffffff |
+| printf '' | ./library | Sends no input at all, which checks that the program exists cleanly and does not hang when the input closes. | ffffff |
 
 ## **The Blockchain and the Block**
 

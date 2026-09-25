@@ -1,3 +1,5 @@
+# Blockchain-Based Library Book Lending Tracker
+
 **DemoVideo**: _https://youtu.be/YUA85d7KCy0_
 | File Name | Link | Purpose of the file |
 | :---- | :---- | :---- |
@@ -14,31 +16,111 @@
 | Librarians.txt | [**librarians.txt**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/data/librarians.txt) | this file stores the staff who can log in: their ID, name, role (ADMIN or LIBRARIAN) and a PBKDF2 hash of their PIN. |
 | Makefile | [**Makefile**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/Makefile) | this file to make compiling the whole project easier by providing the commands needed to build the program and link OpenSSL. |
 
-# **How My Blockchain-Based Library Lending Tracker Works**
+**Technical Report: Individual Assignment 1**
+**Student:** Joseph Nishimwe · African Leadership University
+**Demo video:** https://youtu.be/ivlROFUJ7Yw
+**Repository:** https://github.com/josep-prog/formative_introduction_blockchain
 
-A traditional library lending system can be as simple as keeping a list of which books have been borrowed and returned. However, such a record can be changed after the transaction has happened. For example, someone could change a record from “borrowed” to “returned” without leaving an obvious sign that the record was changed. The purpose of my project was to create a small library lending system where such changes could be detected. To achieve this, I used a simple blockchain written in C. Instead of keeping each lending action as an independent record, every borrow and return is stored as a block. The blocks are connected to each other using their digital fingerprints, called hashes. If an older record is changed, its fingerprint also changes, which allows the program to detect that the chain has been altered. This approach follows the main purpose of the assignment, which requires a blockchain structure, SHA-256 hashing, digital signatures, validation, and a simple interface for managing lending records.
+## Contents
 
-## **Approach for Entire project**
+1. [Introduction](#1-introduction)
+2. [Project files](#2-project-files)
+3. [Build and run](#3-build-and-run)
+4. [Description of the blockchain implementation](#4-description-of-the-blockchain-implementation)
+5. [Security mechanisms](#5-security-mechanisms)
+6. [Data persistence](#6-data-persistence)
+7. [Error handling strategy](#7-error-handling-strategy)
+8. [Screenshots of application execution](#8-screenshots-of-application-execution)
+9. [Testing](#9-testing)
+10. [Challenges encountered and solutions](#10-challenges-encountered-and-solutions)
+11. [System design diagram](#11-system-design-diagram)
+12. [Limitations](#12-limitations)
+13. [Conclusion](#13-conclusion)
 
 <img width="916" height="606" alt="structure" src="https://github.com/user-attachments/assets/e85e3837-be68-4c46-9ee4-873c61da14c0" />
 
 I divided the program into different parts so that each part has a clear responsibility. The main.c file controls what the user sees and connects the other parts of the program. The registry.c file is responsible for loading and searching for books and members. The blockchain.c file contains the main blockchain logic, such as creating blocks, connecting them, checking borrowing status, calculating hashes, and validating the chain. The crypto.c file handles the digital signatures and the creation of the cryptographic key. This separation makes the program easier to understand because the code that deals with books and members is kept separate from the code that deals with the blockchain and cryptography.
+---
 
-**Run the project**
+## 1. Introduction
 
-1. Clone : git clone [https://github.com/josep-prog/formative\_introduction\_blockchain.git](https://github.com/josep-prog/formative_introduction_blockchain.git)   
-2. cd  formative\_introduction\_blockchain
+A library needs to know which books are out, who has them, and when they come back. Usually this is kept in a paper log or a normal database. The problem is that these records are easy to change. A librarian could quietly mark a lost book as "returned", or a borrower could say the log is wrong, and nobody could prove what really happened.
 
-| Command  | Tests |
+In this project I built a small library lending system in the C language that solves this problem with a blockchain. Every time a book is borrowed or returned, the program writes a new record called a block. Each block is locked to the block before it with a SHA-256 hash, and each block is signed with a digital signature. Because of this, if anyone changes an old record, the program can detect it.
+
+The program runs in the terminal. A librarian logs in, and then can borrow a book, return a book, view all records, check that the chain is still valid, mark overdue loans, and (as an admin) run a demonstration of tamper detection.
+
+## 2. Project files
+
+| File | Purpose |
 | :---- | :---- |
-| sudo apt install gcc make libssl-dev | Is for installing the C compiler , build tool and openSSL development files and the program needs |
-| make clean && make | Deletes the old program file and compiles all the source files again into the new program called library |
-| ./library  | Starts the program. It asks for the key passphrase and a librarian login, then shows the menu |
-| ./library --hash-pin LIB003 4321 | Prints the PIN hash to put in a new line of data/librarians.txt |
+| [src/main.c](src/main.c) | Controls the whole program. It shows the menu, handles the login, and calls the other files to load records, create blocks and run security checks. |
+| [src/blockchain.c](src/blockchain.c) | Manages the blockchain. It creates the genesis, borrow, return and overdue blocks, links them with hashes, finds active loans, validates the chain (hashes, links and signatures), and saves and loads the chain file. |
+| [src/blockchain.h](src/blockchain.h) | Defines the `Block` structure and declares the blockchain functions. |
+| [src/crypto.c](src/crypto.c) | Handles security with OpenSSL. It generates the key pair, saves and loads the encrypted private key and the public key, signs and verifies blocks, and hashes librarian PINs. |
+| [src/crypto.h](src/crypto.h) | Declares the cryptographic functions. |
+| [src/registry.c](src/registry.c) | Loads books, members and librarians from the data files, reports bad lines, and finds a record by ID. |
+| [src/registry.h](src/registry.h) | Defines the `Book`, `Member` and `Librarian` structures. |
+| [data/books.txt](data/books.txt) | The book registry: ID, title, author. |
+| [data/members.txt](data/members.txt) | The member registry: ID, full name, course code. |
+| [data/librarians.txt](data/librarians.txt) | Staff who can log in: ID, name, role (ADMIN or LIBRARIAN) and a PBKDF2 hash of their PIN. |
+| [Makefile](Makefile) | Builds the program and links OpenSSL with one command. |
 
-The signing key in data/key.pem is encrypted with a passphrase (at least 4 characters). The program asks for it at start-up, or reads it from the `LIBRARY_KEY_PASSPHRASE` environment variable. The first run creates the key with whatever passphrase you give, and later runs must use the same one.
+These files are created when the program runs. They are listed in `.gitignore` and are not committed:
 
-If you ran an older version of this program, delete the old files first, because the chain format changed: `rm -f data/chain.txt data/key.pem`
+| File | Purpose |
+| :---- | :---- |
+| `data/chain.txt` | The saved blockchain, one block per line. |
+| `data/key.pem` | The private signing key, encrypted with a passphrase. |
+| `data/pub.pem` | The public key, used to check signatures. |
+
+## 3. Build and run
+
+### Required libraries and dependencies
+
+| Dependency | Why it is needed |
+| :---- | :---- |
+| `gcc` | C compiler (the code is C11). |
+| `make` | Runs the build steps in the Makefile. |
+| OpenSSL 3 (`libssl-dev`) | SHA-256 hashing, ECDSA signatures, AES key encryption and PBKDF2 PIN hashing. |
+
+On Ubuntu or Debian, install all of them with:
+
+```bash
+sudo apt install gcc make libssl-dev
+```
+
+### Compilation
+
+```bash
+git clone https://github.com/josep-prog/formative_introduction_blockchain.git
+cd formative_introduction_blockchain
+make clean && make
+```
+
+This compiles all the source files into one program called `library`. The Makefile runs:
+
+```bash
+gcc -Wall -Wextra -std=c11 -o library src/main.c src/blockchain.c src/crypto.c src/registry.c -lssl -lcrypto
+```
+
+### Running
+
+| Command | What it does |
+| :---- | :---- |
+| `./library` | Starts the program. It asks for the key passphrase and a librarian login, then shows the menu. |
+| `./library --verify` | Checks `data/chain.txt` using only the public key in `data/pub.pem`. It needs no passphrase and no login, so anyone can check the records. |
+| `./library --hash-pin LIB003 4321` | Prints the PIN hash to put in a new line of `data/librarians.txt`. |
+
+The signing key in `data/key.pem` is encrypted with a passphrase of at least 4 characters. The program asks for it at start-up, or reads it from the `LIBRARY_KEY_PASSPHRASE` environment variable. The first run creates the key with whatever passphrase you give, and later runs must use the same one.
+
+If you ran an older version of this program, delete the old files first, because the chain format changed:
+
+```bash
+rm -f data/chain.txt data/key.pem data/pub.pem
+```
+
+### Test data
 
 **Librarians (logins):**
 
@@ -49,19 +131,17 @@ If you ran an older version of this program, delete the old files first, because
 <img width="1272" height="704" alt="librarian-admin" src="https://github.com/user-attachments/assets/f98a7e52-d0d0-489c-934f-130c141d665e" />
 
 
-After 3 wrong attempts the program prints "Access denied." and exits. Only an ADMIN can run the tamper-detection demo.
+**Books:**
 
-**Books**  : 
-
-| ID | Title  | Author |
+| ID | Title | Author |
 | :---- | :---- | :---- |
 | BK001 | The Money Trap: Lost Illusions Inside the Tech Bubble | Alok Sama |
 | BK002 | Wars Guns & Votes: Democracy in Dangerous Places | Paul Collier |
 | BK003 | Sustainable Leadership | Clarke Murphy |
 | BK004 | Ancient Philosophy: The Fundamentals | Daniel W. Graham |
-| BK005 | Gulliver's Travels and Other Writings | Jonathan Swift  |
+| BK005 | Gulliver's Travels and Other Writings | Jonathan Swift |
 
-**Member:** 
+**Members:**
 
 | ID | Name | Course |
 | :---- | :---- | :---- |
@@ -71,155 +151,258 @@ After 3 wrong attempts the program prints "Access denied." and exits. Only an AD
 | ALU004 | Manzi Eric | BSE |
 | ALU005 | Mukamana Alice | BEL |
 
-**What to expect :** 
+## 4. Description of the blockchain implementation
 
-1\. On start-up the program prints "Loaded 5 books, 5 members and 2 librarians.", unlocks (or creates) the encrypted signing key in data/key.pem, loads the saved blockchain from data/chain.txt (or starts a new one with the genesis block), and asks the librarian to log in.
+### 4.1 How the code is organised
 
-<img width="1918" height="561" alt="1" src="https://github.com/user-attachments/assets/e52db112-11af-441c-9ab0-adbfbd9ab9b4" />
+I split the program into four parts so that each part has one job. `main.c` shows the menu and connects everything. `registry.c` loads the books, members and librarians and finds a record by its ID. `blockchain.c` creates blocks, links them together, checks the chain and saves it to a file. `crypto.c` does all the cryptography: making keys, signing, checking signatures and hashing PINs. Keeping these apart makes the program easier to read, because the code for books and members is separate from the code for the blockchain and cryptography.
 
-2\. A menu with seven options appears: borrow, return, view records, validate, mark overdue loans, tamper demo and exit.
+### 4.2 The book and member registries
 
-<img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/84364e74-133d-4b7c-9c63-df924bc6caec" />
+When the program starts, it reads `books.txt` and `members.txt` into arrays of `Book` and `Member` structs. Each line has three fields separated by commas. If a file is missing or has no usable lines, the program prints an error and stops. A bad line (a missing field, a field that is too long, a duplicate ID or a `|` character) is reported with its line number and skipped. Windows line endings are handled too.
 
-3\. Every successful borrow or return is added as a signed block and saved to data/chain.txt straight away, so the records are still there the next time the program starts. Each block records which librarian made it. Unknown IDs, a book that is already on loan, a return for a book that is not on loan, or a return by a member who did not borrow the book print an ERROR and add nothing.
+These registries are the first check. Before any block is created, the program looks up the book ID and the member ID. If either one is not in the registry, it prints `ERROR: Book or Member not found` and nothing is added to the chain. The match is exact, so an ID like `BK001X` is not accepted as `BK001`.
 
-<img width="1920" height="1080" alt="3" src="https://github.com/user-attachments/assets/1a028929-8354-4b43-b17a-e216dcc9ab8f" />
+### 4.3 The block
 
-4\. Option 4 (validate) prints "Blockchain is VALID" for an untouched chain and "Blockchain is INVALID - tampering detected!" followed by the block number and the reason (bad hash, broken link, bad signature, bad index or bad genesis block). Option 5 adds an OVERDUE block for every loan older than the loan period. Option 6 (ADMIN only) tampers with Block \#1 in memory only, and the file on disk is never overwritten with an invalid chain.
+Each lending event is stored in one block:
 
-<img width="1920" height="1080" alt="4" src="https://github.com/user-attachments/assets/275da27b-51ee-41cd-8b2f-796498d14335" />
+| Field | Type | What it holds |
+| :---- | :---- | :---- |
+| `index` | `int` | Position of the block in the chain. The first block is 0. |
+| `timestamp` | `time_t` | The time the block was created. |
+| `book_id`, `book_title` | `char[20]`, `char[80]` | The book. The title is copied from the registry at that moment. |
+| `member_id`, `member_name` | `char[20]`, `char[50]` | The member. The name is copied from the registry at that moment. |
+| `librarian_id` | `char[20]` | The librarian who recorded the action (my own addition). |
+| `action` | `char[10]` | `BORROWED`, `RETURNED` or `OVERDUE` (`GENESIS` for block 0). |
+| `previous_hash` | `char[65]` | The hash of the block before this one. |
+| `signature` | `unsigned char[72]` | ECDSA digital signature of the block data, stored with its length. |
+| `hash` | `char[65]` | SHA-256 hash of all the fields above, including the signature. |
 
-## **Books and Members**
+I copy the book title and member name into the block instead of only keeping the IDs. This way the block remembers exactly what was true at the time, even if the registry file changes later.
 
-Before the system can record any lending activity, it first loads the book and member information from two files: books.txt and members.txt. The assignment requires these files to be loaded when the program starts and used to check whether the supplied book and member IDs are valid.
+### 4.4 The genesis block and the chain
 
-The book file contains the book ID, title, and author, while the member file contains the member ID, full name, and course code. The program stores these records in simple arrays while it is running. The functions load\_books() and load\_members() read the two files line by line. A line with missing fields, a field that is too long, a duplicate ID or a '|' character is reported with its line number and skipped. Windows (CRLF) line endings are handled. If either file is missing or has no valid records, the program reports an error and stops. A third file, librarians.txt, is loaded the same way by load\_librarians(). This is important because the system should not record a lending transaction if it cannot confirm that the book or member exists.
+The chain always starts with a genesis block. It has index 0, the action `GENESIS`, and a previous hash made of 64 zeros, because there is no block before it. Every block after that stores the hash of the block before it in its `previous_hash` field. This is what makes it a chain:
 
-When a user wants to borrow a book, the program uses find\_book() to search for the book ID and find\_member() to search for the member ID. If either one cannot be found, the transaction is rejected. The comparison is also exact, meaning that an ID such as BK001EXTRA cannot be treated as the same as BK001. In this way, the registry acts as the first level of protection before anything is added to the blockchain.
+```
+Genesis → Borrow → Return → Borrow → Return
+```
 
-**Testing :** 
+If one old block changes, its hash changes, and the next block no longer points to it correctly.
 
-The blockchain is saved between runs, so run `rm -f data/chain.txt` before each command below to start from a clean chain. First set the passphrase once with `export LIBRARY_KEY_PASSPHRASE=demo-pass`. Every command starts by logging in (`LIB001` / `1234`).
+### 4.5 Borrowing a book
 
-| *command* | *purpose* |
+The librarian types a book ID and a member ID. The program checks both IDs in the registries. Then it checks if the book is already on loan, using `find_active_borrow()`. This function reads the chain from the newest block backwards and finds the last record for that book. If the last record is `BORROWED` (or `OVERDUE`), the book is still out and the program refuses. The blockchain itself is used to know the current state of each book, so no separate list is needed. If the book is free, the program calls `create_lending_block()`, which builds a new `BORROWED` block, signs it and calculates its hash. The block is added to the end of the chain and the chain is saved.
+
+### 4.6 Returning a book
+
+For a return, the program again checks both IDs. It then looks for the book's active `BORROWED` block. If there is none, because the book was never borrowed or was already returned, it prints an error. I also added one more rule: the member returning the book must be the member who borrowed it. If everything is correct, a `RETURNED` block is created with the member details from the original borrow block, then signed, hashed, added and saved.
+
+### 4.7 Overdue loans
+
+Menu option 5 looks at every book. If its last record is `BORROWED` and it is older than the loan period (14 days by default), the program adds an `OVERDUE` block. The book stays on loan until it is returned. A loan is only marked overdue once. For the demo, the loan period can be shortened with the `LOAN_PERIOD_SECONDS` environment variable.
+
+### 4.8 Validating the chain
+
+The function `validate_chain()` answers one question: **has anything been changed?** For every block it checks that:
+
+1. the index matches the block's position,
+2. the stored hash is the same as a freshly calculated hash,
+3. the `previous_hash` matches the hash of the block before, and
+4. the digital signature is valid (checked with the public key).
+
+It also checks that block 0 is a real genesis block. If any check fails, the program prints which block failed and why. The hash is recalculated on a copy of the block, so validation never changes the chain it is checking.
+
+### 4.9 Tamper detection
+
+Option 6 (ADMIN only) shows tamper detection. It changes the book title in block 1 to `TAMPERED TITLE` in memory, without updating the hash or signature, and then validates the chain. The validation fails and reports block 1. The change is only made in memory, and the program never saves a chain that fails validation, so the file on disk stays clean. Restarting the program reloads the clean chain.
+
+Tampering can also be shown by editing `data/chain.txt` in a text editor. The next time the program starts, or when `./library --verify` is run, it reports that the chain is invalid.
+
+## 5. Security mechanisms
+
+### 5.1 SHA-256 hashing
+
+A hash is like a fingerprint for data. SHA-256 turns any data into a 64-character code. If even one letter of the data changes, the code becomes completely different. `create_transaction_data()` joins all the fields of a block together in a fixed order, and `calculate_hash()` runs SHA-256 over them and the signature. This hash is stored in the block, and the next block stores it as its previous hash. This is how the blocks are linked and how changes are detected.
+
+### 5.2 Digital signatures (ECDSA)
+
+Hashing shows that data has changed, but someone who changes a block could also calculate a new hash. Digital signatures stop this. The first time the program runs, `generate_key_pair()` creates a key pair on the P-256 curve using OpenSSL. The private key signs each lending block with `sign_data()`. The public key checks the signature with `verify_signature()`. Without the private key, nobody can make a valid signature for a changed block, so a rewritten block is caught even if its hash was updated.
+
+The private key is saved in `data/key.pem`. It is encrypted with AES-256 using a passphrase, and the file can only be read by its owner. So a copy of the file alone is not enough to sign blocks.
+
+The public key is saved separately, without encryption, in `data/pub.pem`. The program uses **only** this public key when it checks signatures, so checking the records never needs the secret key. Anyone can run `./library --verify` to check the whole chain without a passphrase or login. When the program starts, it also checks that `pub.pem` really belongs to the signing key, and stops if it does not.
+
+### 5.3 Librarian login and roles
+
+Before the menu appears, a librarian must log in with an ID and a PIN. The PINs are never stored as plain text. `librarians.txt` stores a PBKDF2-HMAC-SHA256 hash of each PIN, calculated 100,000 times and salted with the librarian ID, which makes guessing slow. The PIN is hidden while it is typed, and the comparison is done in constant time. After three wrong tries, the program prints "Access denied." and closes.
+
+Each librarian has a role. A LIBRARIAN can borrow, return, view, validate and mark overdue loans. Only an ADMIN can run the tamper demonstration. The ID of the logged-in librarian is written into every block and is covered by the signature, so each block shows who recorded it.
+
+## 6. Data persistence
+
+All data is stored in plain text files in the `data` folder. The registries (`books.txt`, `members.txt`, `librarians.txt`) are read at start-up. The blockchain is stored in `chain.txt`, with one block per line and the fields separated by `|`:
+
+```
+index|timestamp|book_id|book_title|member_id|member_name|librarian_id|action|previous_hash|signature_hex|hash
+```
+
+The signature is written as hexadecimal text. The chain is saved after every borrow, return or overdue action, so no records are lost when the program closes. To avoid a broken file if the program crashes while saving, `save_chain()` first writes to a temporary file and then renames it over the real file. Renaming is a single step, so the file is either the old version or the new version, never half written.
+
+When the program starts, `load_chain()` reads `chain.txt` and the chain is validated straight away. If the file does not exist, a new chain with a genesis block is created. The keys are also kept between runs, so old signatures can still be checked.
+
+## 7. Error handling strategy
+
+My approach is simple: **check everything before changing anything, and never leave the chain in a bad state.**
+
+| Situation | What the program does |
 | :---- | :---- |
-| printf 'LIB001\\n0000\\nLIB001\\n0000\\nLIB001\\n0000\\n' \| ./library | Enters a wrong PIN three times, which checks that the program prints "Access denied." and exits. |
-| printf 'LIB001\\n1234\\n1\\nBK001\\nALU001\\n7\\n' \| ./library | Borrows book BK001 for ALU001 and then exits, which checks that a normal borrow works. |
-| printf 'LIB001\\n1234\\n1\\nBK001\\nALU001\\n1\\nBK001\\nALU002\\n7\\n' \| ./library | Borrows BK001 for one member and then tries to borrow the same book for another member, which checks that the program refuses a book that is already on loan. |
-| printf 'LIB001\\n1234\\n1\\nBK999\\nALU001\\n1\\nBK001\\nALU999\\n7\\n' \| ./library | Tries to borrow an unknown book and then uses an unknown member, which checks that both are rejected with "ERROR: Book or Member not found". |
-| printf 'LIB001\\n1234\\n1\\nBK001\\nALU001\\n2\\nBK001\\nALU002\\n2\\nBK001\\nALU001\\n7\\n' \| ./library | Borrows a book, tries to return it as the wrong member, then returns it as the borrower, which checks that only the borrower can return it. |
-| printf 'LIB001\\n1234\\n2\\nBK001\\nALU001\\n7\\n' \| ./library | Tries to return a book that was never borrowed, which checks that the program prints an error. |
-| printf 'LIB001\\n1234\\n1\\nBK001\\nALU001\\n5\\n3\\n7\\n' \| LOAN\_PERIOD\_SECONDS=0 ./library | Borrows a book with a loan period of 0 seconds and marks overdue loans, which checks that an OVERDUE block is added and shown with a VALID signature. |
-| printf 'LIB001\\n1234\\n1\\nBK001\\nALU001\\n6\\n4\\n7\\n' \| ./library | Borrows a book, runs the tamper demo, and then validates again, which checks that tampering is detected and stays detected. |
-| printf 'LIB002\\n5678\\n6\\n7\\n' \| ./library | Logs in as a LIBRARIAN and tries the tamper demo, which checks that only an ADMIN can run it. |
-| printf 'LIB001\\n1234\\nabc\\n7\\n' \| ./library | Types letters where a number is expected, which checks that the program ignores bad menu input and does not crash. |
-| printf '' \| ./library | Sends no input at all, which checks that the program exits cleanly and does not hang when the input closes. |
+| `books.txt` or `members.txt` missing or empty | Prints an error and stops. |
+| A bad line in a registry file | Prints a warning with the line number and skips the line. |
+| Unknown book ID or member ID | Prints `ERROR: Book or Member not found`. No block is added. |
+| Borrowing a book that is already out | Prints an error. No block is added. |
+| Returning a book that is not on loan, or by the wrong member | Prints an error. No block is added. |
+| Wrong passphrase or wrong PIN | Prints an error. After three wrong PINs, access is denied. |
+| `pub.pem` does not match the signing key | Prints an error and stops. |
+| `chain.txt` cannot be read | Prints an error and stops, so a damaged file is not overwritten. |
+| `chain.txt` was tampered with | Prints a warning with the bad block and the reason. An invalid chain is never saved. |
+| Letters typed where a number is expected | Prints "Invalid choice." and shows the menu again. |
+| Input closed (for example Ctrl+D) | Exits cleanly instead of looping. |
+| Chain reaches its maximum size (1000 blocks) | Prints an error and refuses new blocks. |
 
+Input is always read one full line at a time, and every text field is checked against its maximum size before it is copied. This stops long input from overflowing a buffer or spilling into the next question.
 
-**What to expect :** 
+## 8. Screenshots of application execution
 
-1\. <img width="1920" height="1080" alt="1" src="https://github.com/user-attachments/assets/525eacc9-b608-4172-a64e-fad79f377514" />
+**1. Start-up.** The program loads 5 books, 5 members and 2 librarians, unlocks (or creates) the signing key, loads the saved blockchain (or starts a new one with the genesis block), and asks the librarian to log in.
 
+<img width="1918" height="561" alt="Start-up" src="https://github.com/user-attachments/assets/e52db112-11af-441c-9ab0-adbfbd9ab9b4" />
 
+**2. The menu.** Seven options: borrow, return, view records, validate, mark overdue loans, tamper demo and exit.
 
-2\. <img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/e8649ab8-aa9b-4167-88a8-a8a881c32cd4" />
+<img width="1920" height="1080" alt="Menu" src="https://github.com/user-attachments/assets/84364e74-133d-4b7c-9c63-df924bc6caec" />
 
+**3. Borrowing and returning.** Every successful borrow or return is added as a signed block and saved to `data/chain.txt` straight away. Unknown IDs, a book that is already on loan, a return for a book that is not on loan, or a return by the wrong member print an ERROR and add nothing.
 
+<img width="1920" height="1080" alt="Borrow and return" src="https://github.com/user-attachments/assets/1a028929-8354-4b43-b17a-e216dcc9ab8f" />
 
-3\.<img width="1210" height="495" alt="3" src="https://github.com/user-attachments/assets/922f0c14-7ff0-43dd-ad07-5de445488964" />
+**4. Validation and tamper detection.** Option 4 prints "Blockchain is VALID" for an untouched chain. After option 6 changes Block #1, validation prints "Blockchain is INVALID - tampering detected!" with the block number and the reason.
 
- 
-## **The Blockchain and the Block**
+<img width="1920" height="1080" alt="Validation and tamper detection" src="https://github.com/user-attachments/assets/275da27b-51ee-41cd-8b2f-796498d14335" />
 
-The main idea of the system is that every important lending event becomes a block. A block contains information such as the book, the member, the action taken, the librarian who recorded it, the time of the action, the previous block's hash, a digital signature, and its own hash. The assignment requires the block to contain these important pieces of information so that each lending event can be properly recorded.
+**5. Checking the chain with only the public key (`./library --verify`).**
 
-For example, when a member borrows a book, the program creates a block containing the book ID and title, the member ID and name, and the action BORROWED. When the book is returned, another block is created with the action RETURNED. If a loan runs past the loan period (14 days by default), option 5 adds an OVERDUE block; the book stays on loan until it is returned. I also copy the book title and member name into the block at the time of the transaction. This means that the block keeps the information that was recorded at that particular moment instead of depending on the registry later.
+<!-- Add screenshot here -->
 
-The first block is called the **genesis block**. It does not represent a real borrowing or returning action. Its purpose is simply to start the blockchain. Its previous hash is set to 64 zeros because there is no block before it. Every other block then stores the hash of the block immediately before it. The assignment specifically requires this genesis block and the connection between blocks through their previous hashes.
+**6. Error when `books.txt` or `members.txt` is missing or empty.**
 
-This creates a chain such as:
+<!-- Add screenshot here -->
 
-Genesis →Borrow → Return → Borrow → Return
+## 9. Testing
 
-The important point is that a block does not stand alone. It remembers the previous block, which makes changes to earlier records easier to detect.
+The blockchain is saved between runs, so run `rm -f data/chain.txt` before each command below to start from a clean chain. First set the passphrase once with `export LIBRARY_KEY_PASSPHRASE=demo-pass`. Every command starts by logging in as `LIB001` with PIN `1234`.
 
-## **Hashing and Detecting Changes**
+| Command | What it checks |
+| :---- | :---- |
+| `printf 'LIB001\n0000\nLIB001\n0000\nLIB001\n0000\n' \| ./library` | A wrong PIN three times prints "Access denied." and exits. |
+| `printf 'LIB001\n1234\n1\nBK001\nALU001\n7\n' \| ./library` | A normal borrow works. |
+| `printf 'LIB001\n1234\n1\nBK001\nALU001\n1\nBK001\nALU002\n7\n' \| ./library` | A book that is already on loan cannot be borrowed again. |
+| `printf 'LIB001\n1234\n1\nBK999\nALU001\n1\nBK001\nALU999\n7\n' \| ./library` | An unknown book and an unknown member are both rejected with "ERROR: Book or Member not found". |
+| `printf 'LIB001\n1234\n1\nBK001\nALU001\n2\nBK001\nALU002\n2\nBK001\nALU001\n7\n' \| ./library` | Only the member who borrowed a book can return it. |
+| `printf 'LIB001\n1234\n2\nBK001\nALU001\n7\n' \| ./library` | Returning a book that was never borrowed prints an error. |
+| `printf 'LIB001\n1234\n1\nBK001\nALU001\n5\n3\n7\n' \| LOAN_PERIOD_SECONDS=0 ./library` | An OVERDUE block is added and shown with a VALID signature. |
+| `printf 'LIB001\n1234\n1\nBK001\nALU001\n6\n4\n7\n' \| ./library` | Tampering is detected and stays detected. |
+| `printf 'LIB002\n5678\n6\n7\n' \| ./library` | A LIBRARIAN cannot run the tamper demo; only an ADMIN can. |
+| `printf 'LIB001\n1234\nabc\n7\n' \| ./library` | Letters in the menu are ignored and the program does not crash. |
+| `printf '' \| ./library` | The program exits cleanly when there is no input. |
+| `./library --verify` | The saved chain is checked with only the public key. |
 
-A hash can be understood as a digital fingerprint of information. In my program, SHA-256 is used to create this fingerprint. Before calculating the hash, the program puts the important information from the block into one consistent piece of data. The information includes the block number, time, book, member, librarian, action, and previous hash. The signature information is also included when the final block hash is calculated.
+**Test results:**
 
-The function create\_transaction\_data() was created for this purpose. Its job is simply to prepare the important information from a block in one consistent format. This is useful because the same information needs to be used when creating, signing, and checking a transaction.
+<img width="1920" height="1080" alt="Test results 1" src="https://github.com/user-attachments/assets/525eacc9-b608-4172-a64e-fad79f377514" />
 
-The calculate\_hash() function then takes this information and creates the block's SHA-256 fingerprint. When a block is created, the fingerprint is stored inside the block. Later, when the blockchain is checked, the program calculates the fingerprint again and compares it with the stored one. If the two are different, the contents of the block have changed.
+<img width="1920" height="1080" alt="Test results 2" src="https://github.com/user-attachments/assets/e8649ab8-aa9b-4167-88a8-a8a881c32cd4" />
 
-For example, suppose a block originally contains the title “Things Fall Apart.” If someone changes it to “TAMPERED TITLE,” the block's fingerprint will no longer be the same. This gives the system a simple way to detect that the record has been changed.
+<img width="1210" height="495" alt="Test results 3" src="https://github.com/user-attachments/assets/922f0c14-7ff0-43dd-ad07-5de445488964" />
 
-## **Digital Signatures**
+## 10. Challenges encountered and solutions
 
-In addition to hashing, the program uses digital signatures for lending transactions. A digital signature can be thought of as a special digital stamp attached to a transaction. The first time the program runs, it creates a pair of cryptographic keys and saves them in data/key.pem, encrypted with AES-256 under a passphrase and readable only by the owner. On later runs the same key is unlocked with the passphrase, so old signatures can still be checked. A copy of the file alone is not enough to sign blocks. The private key is used to sign borrow and return transactions, while the other part of the key pair is used to check the signature later.
+**Validation was changing the data it checked.** At first, to check a block, I recalculated its hash directly on the block. This overwrote the stored hash, so a changed block could look correct. I fixed this by recalculating the hash on a copy of the block and comparing the copy with the original. Now validation only reads the chain and never changes it.
 
-The function generate\_key\_pair() creates this key pair, and save\_key() and load\_key() store and read it. If an older, unencrypted key file is found, it is saved again in encrypted form. The function sign\_data() creates a signature for a lending transaction, and verify\_signature() checks whether the signature is still valid. When the user chooses to view the records, the program checks the signatures and reports whether they are valid or invalid. validate\_chain() checks them too.
+**Signatures do not always have the same length.** An ECDSA signature is usually 70 to 72 bytes, not a fixed size. If the program always read 72 bytes, it would check extra bytes that are not part of the signature, and verification would fail. I solved this by storing the real length of each signature next to it, and by refusing any signature longer than 72 bytes.
 
-The purpose of using signatures here is to provide another way of checking the lending records. Hashing helps the program detect changes in the data, while the signature provides a way to check the authenticity of the transaction. The assignment specifically requires digital signatures to authenticate lending actions. Because the librarian's ID is part of the signed data, a signature also proves which logged-in librarian recorded the action.
+**Records and keys were lost between runs.** In my first version, the chain was only kept in memory and a new key was made every time the program started. When the program closed, all records were gone, and old signatures could not be checked with the new key. I now save the chain to `chain.txt` after every action, and I save the key to a file and load it again on the next run. To protect it, the key file is encrypted with a passphrase and only the owner can read it.
 
-## **Authentication and Access Control**
+**Checking the chain needed the secret key.** The program first took the public key from the encrypted private key file, so nobody could check the records without the passphrase. I fixed this by saving the public key in its own file, `pub.pem`, and using only that file for checking. I also added `./library --verify` so anyone can check the chain.
 
-Before the menu appears, a librarian must log in with their ID and PIN. PINs are never stored. data/librarians.txt holds a PBKDF2-HMAC-SHA256 hash of each PIN (100,000 rounds, salted with the librarian ID), and the check uses a constant-time comparison. The PIN is not shown while typing. After three failed attempts, the program exits. Each librarian has a role: a LIBRARIAN can borrow, return, view, validate and mark overdue loans, while only an ADMIN can run the tamper-detection demo.
+**A crash while saving could break the chain file.** If the program stopped in the middle of writing `chain.txt`, the file would be half written. I solved this by writing to a temporary file first and then renaming it, which happens in one step.
 
-## **Borrowing a Book**
+**The tamper demo could damage the real records.** Once I added saving, there was a new risk: after the demo changed a block, the next save would have written the tampered chain to disk. I solved this by making the program validate the chain before every save and refuse to save an invalid chain.
 
-The borrowing process follows a simple sequence. First, the user enters a book ID and a member ID. The program checks both IDs against the registries. If either ID is unknown, the program stops the transaction and displays an error.
+**Special characters in the data files.** The chain file uses `|` to separate fields, so a title containing `|` would break it. The registry loader now rejects such lines. It also removes extra spaces and handles Windows line endings.
 
-If both IDs are valid, the program then checks whether the book is already on loan. For this, I created the find\_active\_borrow() function. Instead of keeping a separate list of borrowed books, this function looks through the blockchain from the newest record backwards. It finds the latest transaction involving that book.
+## 11. System design diagram
 
-If the latest transaction says BORROWED, the book is currently out. If the latest transaction says RETURNED, the book is available. This means that the blockchain itself is used to determine the current state of the book.
+The diagram shows three things. First, how the registries are loaded at start-up and used to check every book ID and member ID before a block is made. Second, how each block points to the block before it through its `previous_hash`, starting from the genesis block. Third, what is inside one block. It also shows the steps of the lending flow (check IDs, check the book's history, build, sign, hash, add, save) and the three checks done when the chain is validated.
 
-If the book is available, the program calls create\_lending\_block() with the action BORROWED. This creates a new block, connects it to the previous block, signs the transaction, calculates its hash, and adds it to the end of the blockchain. This follows the assignment's required process of checking the IDs and the book's loan status before creating a new borrowing record.
+```mermaid
+flowchart TD
+    START(["Program starts"]) --> REG
 
-## **Returning a Book**
+    subgraph REG["1. Registries loaded at start-up"]
+        direction LR
+        BK["books.txt<br/>book_id, title, author"]
+        MB["members.txt<br/>member_id, full_name, course_code"]
+        LB["librarians.txt<br/>librarian_id, name, role, PIN hash"]
+    end
 
-The return process is similar. The user provides the book ID and the member ID, and the program confirms that both exist in the registries. It then uses find\_active\_borrow() to look for the book's most recent borrowing record.
+    REG --> KEY["Unlock signing key<br/>key.pem + passphrase<br/>check pub.pem matches"]
+    KEY --> LOAD["Load chain.txt<br/>or create the Genesis Block"]
+    LOAD --> LOGIN{"Librarian login<br/>ID and PIN correct?"}
+    LOGIN -- "No, after 3 tries" --> DENY(["Access denied"])
+    LOGIN -- "Yes" --> MENU["Menu<br/>Borrow, Return, View, Validate, Overdue, Tamper demo"]
 
-If there is no active borrowing record, the program does not create a return block. This prevents someone from returning a book that the system does not consider borrowed.
+    MENU -- "Borrow or Return" --> ASK["Enter Book ID and Member ID"]
+    ASK --> CHECK{"Both IDs found<br/>in the registries?"}
+    CHECK -- "No" --> ERR1["ERROR: Book or Member not found<br/>nothing is added"]
+    CHECK -- "Yes" --> STATE{"Does the book's history<br/>on the chain allow it?"}
+    STATE -- "No" --> ERR2["ERROR: already on loan<br/>or not on loan"]
+    STATE -- "Yes" --> NEW["Build a new block<br/>copy book title and member name"]
+    NEW --> SIGN["Sign the block data<br/>ECDSA with the private key"]
+    SIGN --> HASH["SHA-256 hash of all fields<br/>and the signature"]
+    HASH --> APPEND["Add the block to the end of the chain"]
+    APPEND --> SAVE["Validate, then save to chain.txt"]
 
-If the book is currently borrowed, the member ID must match the member who borrowed it; otherwise the return is refused. The program then creates a new RETURNED block with the member information from the original borrowing block. The new block is then signed, given its hash, and added to the chain. This follows the assignment requirement for handling returns.
+    APPEND -.-> CHAIN
+    subgraph CHAIN["2. The blockchain: each block points to the one before it"]
+        direction LR
+        G["Block 0: GENESIS<br/>previous_hash = 64 zeros<br/>hash = H0"]
+        B1["Block 1: BORROWED<br/>previous_hash = H0<br/>hash = H1"]
+        B2["Block 2: RETURNED<br/>previous_hash = H1<br/>hash = H2"]
+        G --> B1 --> B2
+    end
 
-## **Validating the Blockchain**
+    B1 -.-> FIELDS
+    subgraph BLOCK["3. Inside one block"]
+        FIELDS["index, timestamp<br/>book_id, book_title<br/>member_id, member_name<br/>librarian_id, action<br/>previous_hash<br/>signature: ECDSA<br/>hash: SHA-256"]
+    end
 
-One of the most important functions in the program is validate\_chain(). Its purpose is to answer a simple question: **Has anything in the blockchain been changed?**
+    MENU -- "Validate" --> VAL["Check every block<br/>1. recompute its hash<br/>2. compare previous_hash links<br/>3. verify signature with pub.pem"]
+    VAL --> OK(["VALID"])
+    VAL --> BAD(["INVALID: block number and reason"])
+```
 
-The function first checks that every block's index matches its position, and that the genesis block has the GENESIS action and 64 zeros as its previous hash. It then checks every block in three ways. First, it calculates the block's hash again and compares it with the hash already stored in that block. If they are different, the contents of the block have changed. Second, for every block after the first one, it checks whether the block's previous\_hash still matches the actual hash of the block before it.
+## 12. Limitations
 
-Third, for every block after the genesis block, it verifies the digital signature with the public key. This catches a block that was rewritten and re-hashed but not signed by the system's key.
+The whole chain file is rewritten after every action. This is fine for a small library but would be slow for a very large one.
 
-All three checks are important. The first tells us whether the contents of a block have changed. The second makes sure that the blocks are still correctly connected. The third checks that the block really was signed by this system. Together, they provide the tamper-detection mechanism required by the assignment. When a check fails, the program reports which block failed and why.
+There is one signing key for the whole system. The key proves that a block came from this program, and the signed librarian ID shows who made it, but separate keys for each librarian would be stronger. The genesis block is not signed, because it holds no lending data.
 
-While developing the program, I also found an issue with validation. Recalculating the hash directly on the original block could change the stored hash during the checking process. I solved this by making a copy of the block before recalculating its hash. In simple terms, the program now checks a copy instead of changing the original record. This means that validation only checks the blockchain and does not modify it.
+The PIN login protects the menu, but anyone who can edit `data/librarians.txt` could add an account. A real system would keep these files on a server that only administrators can change.
 
-## **Tamper Detection Demonstration**
+## 13. Conclusion
 
-The program includes a specific option (6, ADMIN only) to demonstrate what happens when an old record is changed. After at least one book has been borrowed, the program changes the title stored in Block \#1 to TAMPERED TITLE. It does not update the hash or create a new signature.
+This project shows how a blockchain can make library records trustworthy. The registries decide which books and members are valid. The blockchain keeps a full history that is never overwritten, only added to. SHA-256 links the blocks so that any change is visible, and digital signatures prove that each block was made by the system and by a logged-in librarian. The validation step can check the whole history at any time, using only the public key.
 
-The program then validates the blockchain. Because the contents of the block no longer match its stored fingerprint, the validation fails and the program reports that tampering has been detected. This provides a simple demonstration of the main reason for using a blockchain in this project. The assignment also requires a demonstration that changing a past block breaks chain validation.
-
-The change is only made in memory, and the program refuses to save a chain that fails validation. Therefore, restarting the program reloads the clean blockchain from data/chain.txt for another demonstration. You can also open data/chain.txt in a text editor, change a title, and start the program again. It will warn that the saved blockchain is INVALID.
-
-## **Error Handling**
-
-The program also tries to handle situations where an operation should not be allowed. It checks whether the registry files exist, whether they contain usable records (bad lines are reported and skipped), whether the key passphrase and librarian login are correct, whether book and member IDs are valid, whether a book is already borrowed, and whether a book is on loan to that member before allowing it to be returned. It also prevents new blocks from being added once the blockchain reaches its maximum size.
-
-The program also handles invalid menu input. Input is read one line at a time, so overlong input cannot spill into the next prompt. If the user enters something that is not a number when a menu choice is expected, the program shows the menu again. If the input stream is closed, the program exits instead of continuing to ask for input. These checks help prevent the program from entering an unexpected state.
-
-## **Current Limitations**
-
-Although the system demonstrates the main ideas required for the blockchain part of the assignment, it also has some limitations. The blockchain is saved to data/chain.txt after every borrow or return and loaded again on start-up. The whole file is rewritten each time, which is fine for a small library but not for a large one.
-
-There is a single signing key for the whole system, so the key proves that a block came from this program, and the signed librarian ID shows who made it. Separate keys for each librarian would be stronger. The PIN-based login protects the menu, but anyone who can edit data/librarians.txt can add an account. data/chain.txt and data/key.pem are listed in .gitignore and are not committed.
-
-## **Conclusion**
-
-The main purpose of this project was to apply the basic idea of blockchain to a library lending problem. Instead of treating a lending record as an ordinary piece of information that can simply be changed, the program creates a history of connected records. Each new record is linked to the previous one through its hash, lending actions are digitally signed, and only logged-in librarians can record them.
-
-The process is therefore straightforward. The program first checks that the book and member exist. It then checks the book's previous lending activity. If the operation is valid, it creates a new block, signs it, calculates its hash, and adds it to the chain. Later, the program can examine the chain and determine whether any of its records have been changed.
-
-The project therefore demonstrates the basic relationship between a library system and blockchain: **the registry tells the system what is valid, the blockchain keeps the history, cryptography helps protect the records, and validation checks whether the history has been altered.**
-
+In short: **the registry tells the system what is valid, the blockchain keeps the history, cryptography protects the records, and validation checks whether the history has been changed.**

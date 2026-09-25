@@ -15,6 +15,7 @@
 #define LIBRARIANS_FILE "data/librarians.txt"
 #define CHAIN_FILE      "data/chain.txt"
 #define KEY_FILE        "data/key.pem"
+#define PUBLIC_KEY_FILE "data/pub.pem"
 
 #define MAX_LOGIN_ATTEMPTS       3
 #define DEFAULT_LOAN_PERIOD_DAYS 14
@@ -137,6 +138,29 @@ static EVP_PKEY *load_or_create_key(const char *passphrase)
     return key_pair;
 }
 
+/* Loads data/pub.pem, writing it from the signing key the first time. */
+static EVP_PKEY *load_or_create_public_key(EVP_PKEY *key_pair)
+{
+    EVP_PKEY *public_key = load_public_key(PUBLIC_KEY_FILE);
+
+    if (public_key == NULL) {
+        if (!save_public_key(key_pair, PUBLIC_KEY_FILE) ||
+            (public_key = load_public_key(PUBLIC_KEY_FILE)) == NULL) {
+            printf("ERROR: Could not write the public key to %s.\n", PUBLIC_KEY_FILE);
+            return NULL;
+        }
+        printf("Public verification key saved to %s.\n", PUBLIC_KEY_FILE);
+        return public_key;
+    }
+
+    if (EVP_PKEY_eq(public_key, key_pair) != 1) {
+        printf("ERROR: %s does not belong to the signing key in %s.\n", PUBLIC_KEY_FILE, KEY_FILE);
+        EVP_PKEY_free(public_key);
+        return NULL;
+    }
+    return public_key;
+}
+
 static long loan_period_seconds(void)
 {
     const char *env = getenv("LOAN_PERIOD_SECONDS");   /* override for demos */
@@ -151,7 +175,7 @@ static long loan_period_seconds(void)
     return DEFAULT_LOAN_PERIOD_DAYS * 24L * 60 * 60;
 }
 
-static void print_block(Block *block, EVP_PKEY *key_pair)
+static void print_block(Block *block, EVP_PKEY *public_key)
 {
     printf("\n--------------------------------------------------\n");
     printf("Block #%d  [%s]\n", block->index, block->action);
@@ -175,30 +199,32 @@ static void print_block(Block *block, EVP_PKEY *key_pair)
     size_t data_len;
     create_transaction_data(block, data, &data_len);
 
-    int valid = verify_signature(key_pair, data, data_len,
+    int valid = verify_signature(public_key, data, data_len,
                                   block->signature, block->signature_length);
 
     printf("  Signature: %s (%u bytes)\n",
            valid ? "VALID" : "INVALID", block->signature_length);
 }
 
-static void report_validation(Block blockchain[], int count, EVP_PKEY *key_pair)
+/* Returns 1 if the chain is valid. */
+static int report_validation(Block blockchain[], int count, EVP_PKEY *public_key)
 {
     int bad_block;
     const char *reason;
 
-    if (validate_chain(blockchain, count, key_pair, &bad_block, &reason)) {
+    if (validate_chain(blockchain, count, public_key, &bad_block, &reason)) {
         printf("Blockchain is VALID - no tampering detected.\n");
-    } else {
-        printf("Blockchain is INVALID - tampering detected!\n");
-        printf("  Block #%d: %s.\n", bad_block, reason);
+        return 1;
     }
+    printf("Blockchain is INVALID - tampering detected!\n");
+    printf("  Block #%d: %s.\n", bad_block, reason);
+    return 0;
 }
 
 /* Only a valid chain is written to disk, so the tamper demo can never end up in the file. */
-static void save_or_warn(Block blockchain[], int count, EVP_PKEY *key_pair)
+static void save_or_warn(Block blockchain[], int count, EVP_PKEY *public_key)
 {
-    if (!validate_chain(blockchain, count, key_pair, NULL, NULL)) {
+    if (!validate_chain(blockchain, count, public_key, NULL, NULL)) {
         printf("WARNING: chain is invalid, so it was NOT saved to %s.\n", CHAIN_FILE);
         return;
     }
@@ -209,7 +235,8 @@ static void save_or_warn(Block blockchain[], int count, EVP_PKEY *key_pair)
 
 /* Appends a signed block; returns 1 on success. */
 static int append_block(Block blockchain[], int *count, const char *action,
-                        Block *details, const char *librarian_id, EVP_PKEY *key_pair)
+                        Block *details, const char *librarian_id,
+                        EVP_PKEY *key_pair, EVP_PKEY *public_key)
 {
     if (*count >= MAX_BLOCKS) {
         printf("ERROR: Blockchain is full.\n");
@@ -225,7 +252,7 @@ static int append_block(Block blockchain[], int *count, const char *action,
     }
 
     (*count)++;
-    save_or_warn(blockchain, *count, key_pair);
+    save_or_warn(blockchain, *count, public_key);
     return 1;
 }
 
@@ -240,6 +267,31 @@ int main(int argc, char *argv[])
         }
         printf("%s\n", hex);
         return 0;
+    }
+
+    /* Checks data/chain.txt with only the public key - no passphrase or login needed. */
+    if (argc == 2 && strcmp(argv[1], "--verify") == 0) {
+        EVP_PKEY *public_key = load_public_key(PUBLIC_KEY_FILE);
+        if (public_key == NULL) {
+            printf("ERROR: Could not read the public key from %s.\n", PUBLIC_KEY_FILE);
+            return 1;
+        }
+
+        static Block blockchain[MAX_BLOCKS];
+        int count = load_chain(CHAIN_FILE, blockchain);
+        int valid = 0;
+
+        if (count < 0) {
+            printf("ERROR: %s does not exist.\n", CHAIN_FILE);
+        } else if (count == 0) {
+            printf("ERROR: '%s' exists but could not be read.\n", CHAIN_FILE);
+        } else {
+            printf("Checked %d blocks from %s with %s.\n", count, CHAIN_FILE, PUBLIC_KEY_FILE);
+            valid = report_validation(blockchain, count, public_key);
+        }
+
+        EVP_PKEY_free(public_key);
+        return valid ? 0 : 1;
     }
 
     Book books[MAX_BOOKS];
@@ -267,6 +319,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    EVP_PKEY *public_key = load_or_create_public_key(key_pair);
+    if (public_key == NULL) {
+        EVP_PKEY_free(key_pair);
+        return 1;
+    }
+
     Block blockchain[MAX_BLOCKS];
     int count = load_chain(CHAIN_FILE, blockchain);
 
@@ -276,13 +334,13 @@ int main(int argc, char *argv[])
     } else if (count < 0) {
         create_genesis_block(&blockchain[0]);
         count = 1;
-        save_or_warn(blockchain, count, key_pair);
+        save_or_warn(blockchain, count, public_key);
         printf("Started a new blockchain.\n");
     } else {
         printf("Loaded %d blocks from %s.\n", count, CHAIN_FILE);
-        if (!validate_chain(blockchain, count, key_pair, NULL, NULL)) {
+        if (!validate_chain(blockchain, count, public_key, NULL, NULL)) {
             printf("WARNING: the saved blockchain is INVALID - it may have been tampered with!\n");
-            report_validation(blockchain, count, key_pair);
+            report_validation(blockchain, count, public_key);
         }
     }
 
@@ -347,7 +405,8 @@ int main(int argc, char *argv[])
             strcpy(details.member_id, members[member_index].member_id);
             strcpy(details.member_name, members[member_index].full_name);
 
-            if (append_block(blockchain, &count, "BORROWED", &details, user->librarian_id, key_pair)) {
+            if (append_block(blockchain, &count, "BORROWED", &details, user->librarian_id,
+                             key_pair, public_key)) {
                 printf("Borrowed '%s' for %s.\n", details.book_title, details.member_name);
             }
 
@@ -377,17 +436,18 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            if (append_block(blockchain, &count, "RETURNED", &details, user->librarian_id, key_pair)) {
+            if (append_block(blockchain, &count, "RETURNED", &details, user->librarian_id,
+                             key_pair, public_key)) {
                 printf("Returned '%s'.\n", details.book_title);
             }
 
         } else if (choice == 3) {
             for (int i = 0; i < count; i++) {
-                print_block(&blockchain[i], key_pair);
+                print_block(&blockchain[i], public_key);
             }
 
         } else if (choice == 4) {
-            report_validation(blockchain, count, key_pair);
+            report_validation(blockchain, count, public_key);
 
         } else if (choice == 5) {
             long period = loan_period_seconds();
@@ -402,7 +462,8 @@ int main(int argc, char *argv[])
                 }
 
                 Block details = blockchain[latest];
-                if (!append_block(blockchain, &count, "OVERDUE", &details, user->librarian_id, key_pair)) {
+                if (!append_block(blockchain, &count, "OVERDUE", &details, user->librarian_id,
+                             key_pair, public_key)) {
                     break;
                 }
                 printf("OVERDUE: '%s' borrowed by %s (%s).\n",
@@ -424,7 +485,7 @@ int main(int argc, char *argv[])
 
             printf("Changing Block #1's book title in memory only, without re-hashing or re-signing.\n");
             strcpy(blockchain[1].book_title, "TAMPERED TITLE");
-            report_validation(blockchain, count, key_pair);
+            report_validation(blockchain, count, public_key);
             printf("(Restart the program to reload the clean chain from disk.)\n");
 
         } else if (choice == 7) {
@@ -436,6 +497,7 @@ int main(int argc, char *argv[])
 
     } while (choice != 7);
 
+    EVP_PKEY_free(public_key);
     EVP_PKEY_free(key_pair);
     return 0;
 }

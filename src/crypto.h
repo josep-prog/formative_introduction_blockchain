@@ -17,6 +17,10 @@ EVP_PKEY *generate_key_pair(void);
 int save_key(EVP_PKEY *key_pair, const char *filename, const char *passphrase);
 int load_key(const char *filename, const char *passphrase, EVP_PKEY **key_out);
 
+/* The public half is stored unencrypted so anyone can verify signatures. */
+int save_public_key(EVP_PKEY *key, const char *filename);
+EVP_PKEY *load_public_key(const char *filename);
+
 int sign_data(
     EVP_PKEY *private_key,
     const unsigned char *data,

@@ -180,6 +180,33 @@ int load_key(const char *filename, const char *passphrase, EVP_PKEY **key_out)
     return request.asked ? KEY_LOADED : KEY_PLAINTEXT;
 }
 
+int save_public_key(EVP_PKEY *key, const char *filename)
+{
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        return 0;
+    }
+
+    int ok = PEM_write_PUBKEY(file, key);
+    if (fclose(file) != 0) {
+        ok = 0;
+    }
+    return ok == 1;
+}
+
+/* Returns NULL if the file is missing or is not a public key. */
+EVP_PKEY *load_public_key(const char *filename)
+{
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        return NULL;
+    }
+
+    EVP_PKEY *key = PEM_read_PUBKEY(file, NULL, NULL, NULL);
+    fclose(file);
+    return key;
+}
+
 #define PIN_HASH_ITERATIONS 100000
 
 int hash_pin(const char *librarian_id, const char *pin, char out_hex[65])

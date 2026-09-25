@@ -20,6 +20,8 @@ A traditional library lending system can be as simple as keeping a list of which
 
 ## **Approach for Entire project**
 
+<img width="916" height="606" alt="structure" src="https://github.com/user-attachments/assets/e85e3837-be68-4c46-9ee4-873c61da14c0" />
+
 I divided the program into different parts so that each part has a clear responsibility. The main.c file controls what the user sees and connects the other parts of the program. The registry.c file is responsible for loading and searching for books and members. The blockchain.c file contains the main blockchain logic, such as creating blocks, connecting them, checking borrowing status, calculating hashes, and validating the chain. The crypto.c file handles the digital signatures and the creation of the cryptographic key. This separation makes the program easier to understand because the code that deals with books and members is kept separate from the code that deals with the blockchain and cryptography.
 
 **Run the project**

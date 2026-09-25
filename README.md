@@ -18,7 +18,7 @@
 
 **Technical Report: Individual Assignment 1**
 **Student:** Joseph Nishimwe · African Leadership University
-**Demo video:** https://youtu.be/ivlROFUJ7Yw
+**Demo video:** https://youtu.be/YUA85d7KCy0
 **Repository:** https://github.com/josep-prog/formative_introduction_blockchain
 
 ## Contents

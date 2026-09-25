@@ -3,6 +3,7 @@
 **DemoVideo**: _https://youtu.be/ivlROFUJ7Yw_
 | File Name | Link | Purpose of the file |
 | :---- | :---- | :---- |
+| DemoVideo formative | [**DemoVideo**](https://youtu.be/ivlROFUJ7Yw)  | complete explanation of the entire project , and complete guard on how to run it | 
 | Blockchain.c | [**blockchain.c**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/blockchain.c)  | I created this file to manage the blockchain. It creates the genesis, borrowing and returning blocks, links them using hashes, checks active loans, validates the blockchain (hashes, links and signatures), and saves and loads the chain file. |
 | Blockchain.h | [**blockchain.h**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/blockchain.h)  | I created this file to define the Block structure and declare the blockchain functions so that other files, especially main.c, can use them. |
 | Crypto.c | [**crypto.c**](https://github.com/josep-prog/formative_introduction_blockchain/blob/main/src/crypto.c)  | I created this file to handle the security part of the system. It generates keys, saves and loads the key file, creates digital signatures, and verifies signatures using OpenSSL. |

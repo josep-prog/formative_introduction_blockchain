@@ -43,7 +43,7 @@ If you ran an older version of this program, delete the old files first, because
 | ID | Name | Role | PIN |
 | :---- | :---- | :---- | :---- |
 | LIB001 | Joseph Nishimwe | ADMIN | 1234 |
-| LIB002 | Grace Uwimana | LIBRARIAN | 5678 |
+| LIB002 | Librarian | LIBRARIAN | 5678 |
 
 After 3 wrong attempts the program prints "Access denied." and exits. Only an ADMIN can run the tamper-detection demo.
 

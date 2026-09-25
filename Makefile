@@ -1,8 +1,4 @@
-# Simple Makefile - no fancy pattern rules, just enough to build one binary.
-#
-# CC       : which compiler to use
-# CFLAGS   : -Wall (show all warnings) -Wextra (a few more) -std=c11 (language version)
-# LDLIBS   : link against OpenSSL's crypto library (SHA-256 + ECDSA live here)
+# Builds the library binary; OpenSSL provides SHA-256, ECDSA and PBKDF2.
 
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11

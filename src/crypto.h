@@ -4,10 +4,18 @@
 #include <openssl/evp.h>
 #include <stddef.h>
 
+/* Result of load_key(). */
+#define KEY_LOADED     0   /* encrypted key loaded with the given passphrase   */
+#define KEY_MISSING    1   /* no key file yet                                  */
+#define KEY_BAD        2   /* wrong passphrase, or the file is not a valid key */
+#define KEY_PLAINTEXT  3   /* loaded, but the file was not encrypted           */
+
+#define MIN_PASSPHRASE_LENGTH 4
+
 EVP_PKEY *generate_key_pair(void);
 
-int save_key(EVP_PKEY *key_pair, const char *filename);
-EVP_PKEY *load_key(const char *filename);
+int save_key(EVP_PKEY *key_pair, const char *filename, const char *passphrase);
+int load_key(const char *filename, const char *passphrase, EVP_PKEY **key_out);
 
 int sign_data(
     EVP_PKEY *private_key,
@@ -24,5 +32,9 @@ int verify_signature(
     const unsigned char *signature,
     size_t signature_len
 );
+
+/* PBKDF2-HMAC-SHA256 of the PIN, salted with the librarian ID. */
+int hash_pin(const char *librarian_id, const char *pin, char out_hex[65]);
+int verify_pin(const char *librarian_id, const char *pin, const char *stored_hex);
 
 #endif

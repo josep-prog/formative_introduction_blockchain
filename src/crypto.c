@@ -1,10 +1,14 @@
-#define _POSIX_C_SOURCE 200809L   /* for chmod() under -std=c11 */
+#define _POSIX_C_SOURCE 200809L   /* open, fchmod, fdopen */
 
 #include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <openssl/evp.h>
 #include <openssl/ec.h>
 #include <openssl/pem.h>
+#include <openssl/crypto.h>
 
 #include "crypto.h"
 
@@ -112,31 +116,97 @@ int verify_signature(
 }
 
 
-/* Save the key pair as PEM so signatures stay verifiable after a restart.
- * The public key is stored inside the same file, so one file is enough. */
-int save_key(EVP_PKEY *key_pair, const char *filename)
+/* The key pair is stored as AES-256 encrypted PEM. */
+int save_key(EVP_PKEY *key_pair, const char *filename, const char *passphrase)
 {
-    FILE *file = fopen(filename, "w");
+    /* Owner-only from the moment it is created. */
+    int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    if (fd < 0) {
+        return 0;
+    }
+    fchmod(fd, 0600);   /* an older key file may have looser permissions */
+
+    FILE *file = fdopen(fd, "w");
     if (file == NULL) {
+        close(fd);
         return 0;
     }
 
-    int ok = PEM_write_PrivateKey(file, key_pair, NULL, NULL, 0, NULL, NULL);
-    fclose(file);
-
-    chmod(filename, 0600);   /* private key: owner read/write only */
+    int ok = PEM_write_PrivateKey(file, key_pair, EVP_aes_256_cbc(),
+                                  (unsigned char *)passphrase, (int)strlen(passphrase),
+                                  NULL, NULL);
+    if (fclose(file) != 0) {
+        ok = 0;
+    }
     return ok == 1;
 }
 
-/* Returns NULL if the file is missing or is not a valid key. */
-EVP_PKEY *load_key(const char *filename)
+/* OpenSSL only calls this for encrypted keys, so it also detects plaintext ones. */
+struct passphrase_request {
+    const char *passphrase;
+    int asked;
+};
+
+static int passphrase_callback(char *buf, int size, int rwflag, void *userdata)
 {
+    (void)rwflag;
+    struct passphrase_request *request = userdata;
+    request->asked = 1;
+
+    int len = (int)strlen(request->passphrase);
+    if (len > size) {
+        len = size;
+    }
+    memcpy(buf, request->passphrase, (size_t)len);
+    return len;
+}
+
+int load_key(const char *filename, const char *passphrase, EVP_PKEY **key_out)
+{
+    *key_out = NULL;
+
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
-        return NULL;
+        return KEY_MISSING;
     }
 
-    EVP_PKEY *key_pair = PEM_read_PrivateKey(file, NULL, NULL, NULL);
+    struct passphrase_request request = { passphrase, 0 };
+    *key_out = PEM_read_PrivateKey(file, NULL, passphrase_callback, &request);
     fclose(file);
-    return key_pair;
+
+    if (*key_out == NULL) {
+        return KEY_BAD;
+    }
+    return request.asked ? KEY_LOADED : KEY_PLAINTEXT;
+}
+
+#define PIN_HASH_ITERATIONS 100000
+
+int hash_pin(const char *librarian_id, const char *pin, char out_hex[65])
+{
+    unsigned char digest[32];
+
+    if (PKCS5_PBKDF2_HMAC(pin, (int)strlen(pin),
+                          (const unsigned char *)librarian_id, (int)strlen(librarian_id),
+                          PIN_HASH_ITERATIONS, EVP_sha256(),
+                          (int)sizeof(digest), digest) != 1) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < sizeof(digest); i++) {
+        sprintf(&out_hex[i * 2], "%02x", digest[i]);
+    }
+    out_hex[64] = '\0';
+    return 1;
+}
+
+int verify_pin(const char *librarian_id, const char *pin, const char *stored_hex)
+{
+    char computed[65];
+
+    if (strlen(stored_hex) != 64 || !hash_pin(librarian_id, pin, computed)) {
+        return 0;
+    }
+    /* Constant-time compare. */
+    return CRYPTO_memcmp(computed, stored_hex, 64) == 0;
 }

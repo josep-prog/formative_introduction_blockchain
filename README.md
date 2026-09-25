@@ -38,7 +38,7 @@ The signing key in data/key.pem is encrypted with a passphrase (at least 4 chara
 
 If you ran an older version of this program, delete the old files first, because the chain format changed: `rm -f data/chain.txt data/key.pem`
 
-**Librarians (demo logins):**
+**Librarians (logins):**
 
 | ID | Name | Role | PIN |
 | :---- | :---- | :---- | :---- |

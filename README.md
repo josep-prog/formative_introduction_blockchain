@@ -44,6 +44,8 @@ If you ran an older version of this program, delete the old files first, because
 | :---- | :---- | :---- | :---- |
 | LIB001 | Joseph Nishimwe | ADMIN | 1234 |
 | LIB002 | Librarian | LIBRARIAN | 5678 |
+<img width="1272" height="704" alt="librarian-admin" src="https://github.com/user-attachments/assets/f98a7e52-d0d0-489c-934f-130c141d665e" />
+
 
 After 3 wrong attempts the program prints "Access denied." and exits. Only an ADMIN can run the tamper-detection demo.
 
